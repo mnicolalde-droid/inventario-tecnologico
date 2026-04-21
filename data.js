@@ -1,38 +1,38 @@
 const ACTAS_CONFIG = {
   entrega: {
     nombre: 'Acta de entrega de equipos tecnológicos',
-    plantillaId: '1rwVSGlBWJx6HtA07eH4e3S65GD_2O4c1WXw-DFbK-Vw',
-    carpetaId: '1V7rjK0V2naOJyKbALvi9KjGffU5LVD4p',
+    plantillaId: '',
+    carpetaId: '',
     nombreArchivo: 'Acta_Entrega'
   },
   prestamo: {
     nombre: 'Acta de préstamo de equipos tecnológicos',
-    plantillaId: '1QIthsAonlVmHjOtLAAE_wuEuLu008lO73mT9zX32n-8',
-    carpetaId: '1KlYOfg-PVEZv79i0C09DdTpawLuAXVIh',
+    plantillaId: '',
+    carpetaId: '',
     nombreArchivo: 'Acta_Prestamo'
   },
   recepcion: {
     nombre: 'Acta de recepción de equipos tecnológicos',
-    plantillaId: '1_rCGYPUBWtebLP9TOsr-aMaMp97-g3oq82p1rr-i33g',
-    carpetaId: '1H3VRDw_dmz3N1BG2CwH7HoYlnBLh7tmp',
+    plantillaId: '',
+    carpetaId: '',
     nombreArchivo: 'Acta_Recepcion'
   },
   perifericos:{
     nombre: 'Acta de entrega de periféricos tecnológicos',
-    plantillaId: '1Hq-6KNdEtN_Gm3CIE3fILEWRMHW9pfxcfucFD2siZnc',
-    carpetaId: '1JH0noJvGIdDDHNLqwYhnQRDqB3tq1O6H',
+    plantillaId: '',
+    carpetaId: '',
     nombreArchivo: 'Acta_Perifericos'
   },
   devolucion:{
     nombre: 'Acta de devolución de equipos tecnológicos',
-    plantillaId: '1moW9ePndeRl5Otaj2SxXCBY4WGj1JvKW9OA_-39WrtU',
-    carpetaId: '1vHE122Y36QnSC2YTgk48B44U-zEW5Eiq',
+    plantillaId: '',
+    carpetaId: '',
     nombreArchivo: 'Acta_Devolucion'
   },
   cambio:{
     nombre: 'Acta de cambio de equipos tecnológicos',
-    plantillaId: '1ypLcZwEvNa-KM9HrUcdp9JqZZ5uLxsCuw2INXlSIr1U',
-    carpetaId: '1Fz2E036rqs1xOdugRjQQsEiAf874sKdz',
+    plantillaId: '',
+    carpetaId: '',
     nombreArchivo: 'Acta_Cambio'
   }
 
