@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    body {
+      font-family: Arial;
+      padding: 15px;
+      background: #f5f7fa;
+    }
+
+    h3 {
+      margin-bottom: 10px;
+    }
+
+    select, input {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 10px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+
+    .card {
+      background: white;
+      padding: 10px;
+      border-radius: 10px;
+      margin-bottom: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+
+    .lista {
+      max-height: 120px;
+      overflow-y: auto;
+    }
+
+    .item {
+      padding: 6px;
+      border-bottom: 1px solid #eee;
+      cursor: pointer;
+    }
+
+    .item:hover {
+      background: #f0f0f0;
+    }
+
+    .seleccionado {
+      background: #d0e6ff !important;
+    }
+
+    .selectable-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-bottom: 1px solid #eee;
+      cursor: pointer;
+      min-height: 42px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    .selectable-item span {
+      flex: 1;
+      min-width: 0;
+      line-height: 1.4;
+      white-space: normal;
+      word-break: break-word;
+    }
+
+    .selectable-item:hover {
+      background: #f0f0f0;
+    }
+
+    .selectable-item.seleccionado {
+      background: #d0e6ff;
+    }
+
+    button {
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 12px;
+      width: 100%;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #0056b3;
+    }
+  </style>
+</head>
+
+
+
+<body>
+
+  <h3>📄 Generador de Actas</h3>
+
+  <div class="card">
+    <label>Tipo de acta</label>
+    <select id="tipoActa" onchange="seleccionarTipoActa()">
+      <option value="">Seleccione el tipo de acta:</option>
+    </select>
+    <div class="helper-text" id="infoTipoActa">Seleccione el tipo de acta para ver los elementos disponibles.</div>
+  </div>
+
+  <div class="card">
+    <label>Buscar colaborador</label>
+    <input type="text" id="buscador" placeholder="Buscar por nombre..." oninput="filtrar()">
+    <div class="lista" id="lista"></div>
+  </div>
+
+  <div class="card" id="seleccionCard" style="display:none;">
+    <h4>Colaborador seleccionado</h4>
+    <div id="seleccionadoInfo" class="item"></div>
+    <button type="button" class="small-button" onclick="limpiarSeleccion()">Cambiar colaborador</button>
+  </div>
+
+  <div class="card">
+    <h4>Equipos</h4>
+    <div class="lista" id="equipos">Seleccione tipo de acta y colaborador para cargar los equipos.</div>
+  </div>
+
+  <div class="card">
+    <h4>Accesorios</h4>
+    <div class="lista" id="accesorios">Seleccione tipo de acta y colaborador para cargar los accesorios.</div>
+  </div>
+
+  <button onclick="generar()">Generar Acta</button>
+
+  <script>
+    let colaboradores = [];
+    let seleccionado = null;
+    let accesorios = [];
+    let equipos = [];
+    let selectedEquipoIds = [];
+    let selectedAccesorioIds = [];
+    let tipoActa = '';
+
+    function cargarDatos() {
+      cargarTiposActa();
+      cargarUsuarios();
+    }
+
+    function cargarTiposActa() {
+      google.script.run.withSuccessHandler(data => {
+        const select = document.getElementById('tipoActa');
+        data.forEach(acta => {
+          select.innerHTML += `<option value="${acta.id}">${acta.nombre}</option>`;
+        });
+      }).withFailureHandler(err => {
+        console.error(err);
+        alert('Error cargando tipos de acta.');
+      }).obtenerActasDisponibles();
+    }
+
+    function cargarUsuarios() {
+      google.script.run.withSuccessHandler(data => {
+        colaboradores = data;
+        mostrarColaboradores(data);
+      }).withFailureHandler(err => {
+        console.error(err);
+        alert('Error cargando colaboradores.');
+      }).obtenerColaboradores();
+    }
+
+    function seleccionarTipoActa() {
+      tipoActa = document.getElementById('tipoActa').value;
+      document.getElementById('infoTipoActa').innerText = tipoActa
+        ? 'Tipo de acta seleccionado. Ahora elija un colaborador.'
+        : 'Seleccione el tipo de acta para ver los elementos disponibles.';
+      if (seleccionado) {
+        cargarItems();
+      } else {
+        mostrarEquipos([]);
+        mostrarAccesorios([]);
+      }
+    }
+
+    function mostrarColaboradores(lista) {
+      const contenedor = document.getElementById('lista');
+      contenedor.innerHTML = '';
+
+      if (!lista.length) {
+        contenedor.innerHTML = '<div class="item">No hay colaboradores activos.</div>';
+        return;
+      }
+
+      lista.forEach(user => {
+        const div = document.createElement('div');
+        div.className = 'item';
+        div.innerText = `${user.nombre} · ${user.cargo}`;
+        if (seleccionado && seleccionado.id === user.id) {
+          div.classList.add('seleccionado');
+        }
+        div.onclick = () => seleccionarColaborador(user);
+        contenedor.appendChild(div);
+      });
+    }
+
+    function seleccionarColaborador(user) {
+      seleccionado = user;
+      document.getElementById('seleccionadoInfo').innerText = `${user.nombre} · ${user.cargo}`;
+      document.getElementById('seleccionCard').style.display = 'block';
+      document.getElementById('buscador').value = '';
+      mostrarColaboradores(colaboradores);
+      cargarItems();
+    }
+
+    function limpiarSeleccion() {
+      seleccionado = null;
+      selectedEquipoIds = [];
+      selectedAccesorioIds = [];
+      document.getElementById('seleccionCard').style.display = 'none';
+      document.getElementById('seleccionadoInfo').innerText = '';
+      mostrarColaboradores(colaboradores);
+      mostrarEquipos([]);
+      mostrarAccesorios([]);
+    }
+
+    function cargarItems() {
+      if (!tipoActa || !seleccionado) {
+        mostrarEquipos([]);
+        mostrarAccesorios([]);
+        return;
+      }
+
+      google.script.run.withSuccessHandler(data => {
+        equipos = data;
+        selectedEquipoIds = [];
+        mostrarEquipos(data);
+      }).withFailureHandler(err => {
+        console.error(err);
+        alert('Error cargando equipos.');
+      }).obtenerEquiposDisponibles(tipoActa, seleccionado.id);
+
+      google.script.run.withSuccessHandler(data => {
+        accesorios = data;
+        selectedAccesorioIds = [];
+        mostrarAccesorios(data);
+      }).withFailureHandler(err => {
+        console.error(err);
+        alert('Error cargando accesorios.');
+      }).obtenerAccesoriosDisponibles(tipoActa, seleccionado.id);
+    }
+
+    function mostrarEquipos(lista) {
+      const cont = document.getElementById('equipos');
+      if (!lista.length) {
+        cont.innerHTML = '<div class="item">No hay equipos disponibles para este tipo de acta.</div>';
+        return;
+      }
+
+      cont.innerHTML = lista.map(e => `
+        <div class="item selectable-item ${selectedEquipoIds.includes(e.id) ? 'seleccionado' : ''}" onclick="toggleEquipo(${e.id})">
+          <span>${e.tipo_equipo || 'Equipo'} · ${e.marca || ''} ${e.modelo || ''} ${e.memoria_ram ? '(' + e.memoria_ram + ')' : ''}</span>
+        </div>
+      `).join('');
+    }
+
+    function mostrarAccesorios(lista) {
+      const cont = document.getElementById('accesorios');
+      if (!lista.length) {
+        cont.innerHTML = '<div class="item">No hay accesorios disponibles para este tipo de acta.</div>';
+        return;
+      }
+
+      cont.innerHTML = lista.map(a => `
+        <div class="item selectable-item ${selectedAccesorioIds.includes(a.id) ? 'seleccionado' : ''}" onclick="toggleAccesorio(${a.id})">
+          <span>${a.nombre_accesorio || 'Accesorio'} · ${a.marca_accesorio || ''}</span>
+        </div>
+      `).join('');
+    }
+
+    function toggleEquipo(id) {
+      const index = selectedEquipoIds.indexOf(id);
+      if (index === -1) {
+        selectedEquipoIds.push(id);
+      } else {
+        selectedEquipoIds.splice(index, 1);
+      }
+      mostrarEquipos(equipos);
+    }
+
+    function toggleAccesorio(id) {
+      const index = selectedAccesorioIds.indexOf(id);
+      if (index === -1) {
+        selectedAccesorioIds.push(id);
+      } else {
+        selectedAccesorioIds.splice(index, 1);
+      }
+      mostrarAccesorios(accesorios);
+    }
+
+    function filtrar() {
+      const texto = document.getElementById('buscador').value.toLowerCase();
+      const filtrados = colaboradores.filter(u => u.nombre.toLowerCase().includes(texto));
+      mostrarColaboradores(filtrados);
+    }
+
+    function generar() {
+      if (!tipoActa) {
+        alert('Seleccione el tipo de acta.');
+        return;
+      }
+      if (!seleccionado) {
+        alert('Seleccione un colaborador.');
+        return;
+      }
+
+      const equiposSeleccionados = equipos.filter(e => selectedEquipoIds.includes(e.id));
+      const accesoriosSeleccionados = accesorios.filter(a => selectedAccesorioIds.includes(a.id));
+
+      if (!equiposSeleccionados.length && !accesoriosSeleccionados.length) {
+        alert('Seleccione al menos un equipo o accesorio.');
+        return;
+      }
+
+      google.script.run.withSuccessHandler(() => {
+        const crearOtra = confirm('Acta generada correctamente. ¿Desea generar otra acta?');
+        if (crearOtra) {
+          reiniciarFormulario();
+        } else {
+          google.script.host.close();
+        }
+      }).withFailureHandler(err => {
+        console.error(err);
+        alert('Error al generar el acta. Revise la consola del script para más detalles.');
+      }).generarActa({
+        tipoActa,
+        usuario: seleccionado,
+        equipos: equiposSeleccionados,
+        accesorios: accesoriosSeleccionados
+      });
+    }
+
+    function reiniciarFormulario() {
+      tipoActa = '';
+      document.getElementById('tipoActa').value = '';
+      limpiarSeleccion();
+      document.getElementById('buscador').value = '';
+      document.getElementById('infoTipoActa').innerText = 'Seleccione el tipo de acta para ver los elementos disponibles.';
+    }
+
+    window.onload = cargarDatos;
+  </script>
+
+</body>
+</html>
