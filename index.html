@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    body {
+      font-family: Arial;
+      padding: 15px;
+      background: #f5f7fa;
+    }
+
+    h3 {
+      margin-bottom: 10px;
+    }
+
+    select, input {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 10px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+
+    .card {
+      background: white;
+      padding: 10px;
+      border-radius: 10px;
+      margin-bottom: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+
+    .lista {
+      max-height: 120px;
+      overflow-y: auto;
+    }
+
+    .item {
+      padding: 6px;
+      border-bottom: 1px solid #eee;
+      cursor: pointer;
+    }
+
+    .item:hover {
+      background: #f0f0f0;
+    }
+
+    .seleccionado {
+      background: #d0e6ff !important;
+    }
+
+    .selectable-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-bottom: 1px solid #eee;
+      cursor: pointer;
+      min-height: 42px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    .selectable-item span {
+      flex: 1;
+      min-width: 0;
+      line-height: 1.4;
+      white-space: normal;
+      word-break: break-word;
+    }
+
+    .selectable-item:hover {
+      background: #f0f0f0;
+    }
+
+    .selectable-item.seleccionado {
+      background: #d0e6ff;
+    }
+
+    button {
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 12px;
+      width: 100%;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #0056b3;
+    }
+  </style>
+</head>
+
+
+
+<body>
+
+  <h3>📄 Generador de Actas</h3>
+
+  <div class="card">
+    <label>Tipo de acta</label>
+    <select id="tipoActa" onchange="seleccionarTipoActa()">
+      <option value="">Seleccione el tipo de acta:</option>
+    </select>
+    <div class="helper-text" id="infoTipoActa">Seleccione el tipo de acta para ver los elementos disponibles.</div>
+  </div>
+
+  <div class="card" id="colaboradorCard">
+    <label>Buscar colaborador</label>
+    <input type="text" id="buscador" placeholder="Buscar por nombre..." oninput="filtrar()">
+    <div class="lista" id="lista"></div>
+  </div>
+
+  <div class="card" id="seleccionCard" style="display:none;">
+    <h4>Colaborador seleccionado</h4>
+    <div id="seleccionadoInfo" class="item"></div>
+    <button type="button" class="small-button" onclick="limpiarSeleccion()">Cambiar colaborador</button>
+  </div>
+
+  <div class="card" id="procesoCard" style="display:none;">
+    <label>Proceso/Motivo del préstamo</label>
+    <input type="text" id="proceso" placeholder="Ej: Capacitación, Mantenimiento...">
+  </div>
+
+  <div class="card" id="observacionesCard" style="display:none;">
+    <label>Observaciones del equipo</label>
+    <input type="text" id="observacionesEquipo" placeholder="Ej: Pantalla rota, falta teclado...">
+    <label>Observaciones de accesorios</label>
+    <input type="text" id="observacionesAccesorio" placeholder="Ej: Falta cargador, cable dañado...">
+    <label>Estado del equipo</label>
+    <select id="estadoEquipo">
+      <option value="">Seleccione el estado...</option>
+      <option value="Bueno">Bueno</option>
+      <option value="Regular">Regular</option>
+      <option value="Malo">Malo</option>
+    </select>
+  </div>
+
+  <div class="card" id="cambioCard" style="display:none;">
+    <label>Motivo del cambio</label>
+    <input type="text" id="motivo" placeholder="Ej: Equipo defectuoso, actualización...">
+    <label>Estado del equipo anterior</label>
+    <select id="estadoEquipoAnterior">
+      <option value="">Seleccione el estado...</option>
+      <option value="Bueno">Bueno</option>
+      <option value="Regular">Regular</option>
+      <option value="Malo">Malo</option>
+    </select>
+  </div>
+
+  <div class="card" id="infoActualCard" style="display:none;">
+    <h4>Asignaciones actuales del colaborador</h4>
+    <p style="font-size: 12px; color: #666; margin-bottom: 10px;">Seleccione el equipo anterior y los accesorios que se devolveran. Los accesorios no seleccionados se conservaran con el colaborador.</p>
+    <div id="equiposActuales" style="margin-bottom: 10px;">
+      <strong>Equipo actual</strong>
+      <div id="listaEquiposActuales" class="lista" style="font-size: 12px;">Seleccione un colaborador para cargar los equipos.</div>
+    </div>
+    <div id="accesoriosActuales">
+      <strong>Accesorios actuales</strong>
+      <div id="listaAccesoriosActuales" class="lista" style="font-size: 12px;">Seleccione un colaborador para cargar los accesorios.</div>
+    </div>
+  </div>
+
+  <div class="card" id="equiposCard">
+    <h4 id="equiposTitulo">Equipos</h4>
+    <div class="lista" id="equipos">Seleccione tipo de acta y colaborador para cargar los equipos.</div>
+  </div>
+
+  <div class="card" id="accesoriosCard">
+    <h4 id="accesoriosTitulo">Accesorios</h4>
+    <div class="lista" id="accesorios">Seleccione tipo de acta y colaborador para cargar los accesorios.</div>
+  </div>
+
+  <button onclick="generar()">Generar Acta</button>
+
+  <script>
+    let colaboradores = [];
+    let seleccionado = null;
+    let accesorios = [];
+    let equipos = [];
+    let equiposActualesCambio = [];
+    let accesoriosActualesCambio = [];
+    let selectedEquipoIds = [];
+    let selectedAccesorioIds = [];
+    let selectedEquipoActualId = null;
+    let selectedAccesoriosActualesIds = [];
+    let tipoActa = '';
+
+    function cargarDatos() {
+      cargarTiposActa();
+      cargarUsuarios();
+    }
+
+    function cargarTiposActa() {
+      google.script.run.withSuccessHandler(data => {
+        const select = document.getElementById('tipoActa');
+        data.forEach(acta => {
+          select.innerHTML += `<option value="${acta.id}">${acta.nombre}</option>`;
+        });
+      }).withFailureHandler(err => {
+        if (previewWindow && !previewWindow.closed) {
+          previewWindow.close();
+        }
+        console.error(err);
+        alert('Error cargando tipos de acta.');
+      }).obtenerActasDisponibles();
+    }
+
+    function cargarUsuarios() {
+      google.script.run.withSuccessHandler(data => {
+        colaboradores = data;
+        mostrarColaboradores(data);
+      }).withFailureHandler(err => {
+        console.error(err);
+        alert('Error cargando colaboradores.');
+      }).obtenerColaboradores();
+    }
+
+    function seleccionarTipoActa() {
+      const equiposTitulo = document.getElementById('equiposTitulo');
+      const accesoriosTitulo = document.getElementById('accesoriosTitulo');
+
+      tipoActa = document.getElementById('tipoActa').value;
+      document.getElementById('infoTipoActa').innerText = tipoActa
+        ? 'Tipo de acta seleccionado.'
+        : 'Seleccione el tipo de acta para ver los elementos disponibles.';
+      
+      // Reset de campos especiales
+      document.getElementById('procesoCard').style.display = 'none';
+      document.getElementById('observacionesCard').style.display = 'none';
+      document.getElementById('cambioCard').style.display = 'none';
+      document.getElementById('infoActualCard').style.display = 'none';
+      document.getElementById('proceso').value = '';
+      document.getElementById('proceso').disabled = false;
+      document.getElementById('motivo').value = '';
+      document.getElementById('estadoEquipoAnterior').value = '';
+      resetCambioState();
+      equiposTitulo.innerText = 'Equipos';
+      accesoriosTitulo.innerText = 'Accesorios';
+      
+      // Configuración específica por tipo de acta
+      if (tipoActa === 'prestamo') {
+        document.getElementById('procesoCard').style.display = 'block';
+        document.getElementById('equiposCard').style.display = 'block';
+        document.getElementById('accesoriosCard').style.display = 'block';
+      } else if (tipoActa === 'recepcion') {
+        document.getElementById('observacionesCard').style.display = 'block';
+        document.getElementById('equiposCard').style.display = 'block';
+        document.getElementById('accesoriosCard').style.display = 'block';
+      } else if (tipoActa === 'perifericos') {
+        document.getElementById('equiposCard').style.display = 'none';
+        document.getElementById('accesoriosCard').style.display = 'block';
+        accesoriosTitulo.innerText = 'Accesorios disponibles';
+      } else if (tipoActa === 'cambio') {
+        document.getElementById('cambioCard').style.display = 'block';
+        document.getElementById('infoActualCard').style.display = 'block';
+        document.getElementById('equiposCard').style.display = 'block';
+        document.getElementById('accesoriosCard').style.display = 'block';
+        equiposTitulo.innerText = 'Nuevo equipo disponible';
+        accesoriosTitulo.innerText = 'Nuevos accesorios disponibles';
+      } else {
+        document.getElementById('equiposCard').style.display = 'block';
+        document.getElementById('accesoriosCard').style.display = 'block';
+      }
+      
+      // Para devolución no necesitamos buscar por colaborador
+      if (tipoActa === 'devolucion') {
+        document.getElementById('colaboradorCard').style.display = 'none';
+        document.getElementById('seleccionCard').style.display = 'none';
+        cargarItemsDevoluccion();
+      } else {
+        document.getElementById('colaboradorCard').style.display = 'block';
+        if (seleccionado) {
+          cargarItems();
+        } else {
+          mostrarEquipos([]);
+          mostrarAccesorios([]);
+          if (tipoActa === 'cambio') {
+            mostrarEquiposActualesCambio([]);
+            mostrarAccesoriosActualesCambio([]);
+          }
+        }
+      }
+    }
+
+    function mostrarColaboradores(lista) {
+      const contenedor = document.getElementById('lista');
+      contenedor.innerHTML = '';
+
+      if (!lista.length) {
+        contenedor.innerHTML = '<div class="item">No hay colaboradores activos.</div>';
+        return;
+      }
+
+      lista.forEach(user => {
+        const div = document.createElement('div');
+        div.className = 'item';
+        div.innerText = `${user.nombre} · ${user.cargo}`;
+        if (seleccionado && seleccionado.id === user.id) {
+          div.classList.add('seleccionado');
+        }
+        div.onclick = () => seleccionarColaborador(user);
+        contenedor.appendChild(div);
+      });
+    }
+
+    function seleccionarColaborador(user) {
+      seleccionado = user;
+      document.getElementById('seleccionadoInfo').innerText = `${user.nombre} · ${user.cargo}`;
+      document.getElementById('seleccionCard').style.display = 'block';
+      document.getElementById('buscador').value = '';
+      mostrarColaboradores(colaboradores);
+      cargarItems();
+    }
+
+    function limpiarSeleccion() {
+      seleccionado = null;
+      selectedEquipoIds = [];
+      selectedAccesorioIds = [];
+      resetCambioState();
+      document.getElementById('seleccionCard').style.display = 'none';
+      document.getElementById('seleccionadoInfo').innerText = '';
+      mostrarColaboradores(colaboradores);
+      mostrarEquipos([]);
+      mostrarAccesorios([]);
+    }
+
+    function resetCambioState() {
+      equiposActualesCambio = [];
+      accesoriosActualesCambio = [];
+      selectedEquipoActualId = null;
+      selectedAccesoriosActualesIds = [];
+      mostrarEquiposActualesCambio([]);
+      mostrarAccesoriosActualesCambio([]);
+    }
+
+    function cargarItemsDevoluccion() {
+      selectedEquipoIds = [];
+      selectedAccesorioIds = [];
+
+      google.script.run.withSuccessHandler(data => {
+        equipos = data;
+        mostrarEquipos(data);
+      }).withFailureHandler(err => {
+        console.error(err);
+        alert('Error cargando equipos prestados.');
+      }).obtenerEquiposPrestados();
+
+      google.script.run.withSuccessHandler(data => {
+        accesorios = data;
+        mostrarAccesorios(data);
+      }).withFailureHandler(err => {
+        console.error(err);
+        alert('Error cargando accesorios prestados.');
+      }).obtenerAccesoriosPrestados();
+    }
+
+    function cargarItems() {
+      if (!tipoActa || !seleccionado) {
+        mostrarEquipos([]);
+        mostrarAccesorios([]);
+        return;
+      }
+
+      google.script.run.withSuccessHandler(data => {
+        equipos = data;
+        selectedEquipoIds = [];
+        mostrarEquipos(data);
+      }).withFailureHandler(err => {
+        console.error(err);
+        alert('Error cargando equipos.');
+      }).obtenerEquiposDisponibles(tipoActa, seleccionado.id);
+
+      google.script.run.withSuccessHandler(data => {
+        accesorios = data;
+        selectedAccesorioIds = [];
+        mostrarAccesorios(data);
+      }).withFailureHandler(err => {
+        console.error(err);
+        alert('Error cargando accesorios.');
+      }).obtenerAccesoriosDisponibles(tipoActa, seleccionado.id);
+
+      // Para cambio, también cargar información actual del colaborador
+      if (tipoActa === 'cambio') {
+        google.script.run.withSuccessHandler(data => {
+          equiposActualesCambio = data;
+          selectedEquipoActualId = null;
+          mostrarEquiposActualesCambio(data);
+        }).withFailureHandler(err => {
+          console.error(err);
+          document.getElementById('listaEquiposActuales').innerHTML = '<div style="color: red;">Error al cargar</div>';
+        }).obtenerEquiposOcupados(seleccionado.id);
+
+        google.script.run.withSuccessHandler(data => {
+          accesoriosActualesCambio = data;
+          selectedAccesoriosActualesIds = [];
+          mostrarAccesoriosActualesCambio(data);
+        }).withFailureHandler(err => {
+          console.error(err);
+          document.getElementById('listaAccesoriosActuales').innerHTML = '<div style="color: red;">Error al cargar</div>';
+        }).obtenerAccesoriosOcupados(seleccionado.id);
+      }
+    }
+
+    function mostrarEquiposActualesCambio(lista) {
+      const cont = document.getElementById('listaEquiposActuales');
+      if (!seleccionado) {
+        cont.innerHTML = '<div class="item">Seleccione un colaborador para cargar los equipos.</div>';
+        return;
+      }
+
+      if (!lista.length) {
+        cont.innerHTML = '<div class="item">No hay equipos actualmente asignados.</div>';
+        return;
+      }
+
+      cont.innerHTML = lista.map(e => {
+        const serie = e.numero_serie ? ` · SN: ${e.numero_serie}` : '';
+        return `
+        <div class="item selectable-item ${selectedEquipoActualId === e.rowIndex ? 'seleccionado' : ''}" onclick="toggleEquipoActualCambio(${e.rowIndex})">
+          <span>${e.tipo_equipo || 'Equipo'} · ${e.marca || ''} ${e.modelo || ''}${serie}${e.memoria_ram ? ' (' + e.memoria_ram + ')' : ''}</span>
+        </div>
+      `;
+      }).join('');
+    }
+
+    function mostrarAccesoriosActualesCambio(lista) {
+      const cont = document.getElementById('listaAccesoriosActuales');
+      if (!seleccionado) {
+        cont.innerHTML = '<div class="item">Seleccione un colaborador para cargar los accesorios.</div>';
+        return;
+      }
+
+      if (!lista.length) {
+        cont.innerHTML = '<div class="item">No hay accesorios actualmente asignados.</div>';
+        return;
+      }
+
+      cont.innerHTML = lista.map(a => {
+        const idAccesorio = a.identificador || a.ID_accesorio || 'Accesorio';
+        return `
+        <div class="item selectable-item ${selectedAccesoriosActualesIds.includes(a.rowIndex) ? 'seleccionado' : ''}" onclick="toggleAccesorioActualCambio(${a.rowIndex})">
+          <span>ID: ${idAccesorio} · ${a.nombre_accesorio || 'Accesorio'} · ${a.marca_accesorio || ''}</span>
+        </div>
+      `;
+      }).join('');
+    }
+
+    function mostrarEquipos(lista) {
+      const cont = document.getElementById('equipos');
+      if (!lista.length) {
+        cont.innerHTML = '<div class="item">No hay equipos disponibles para este tipo de acta.</div>';
+        return;
+      }
+
+      cont.innerHTML = lista.map(e => {
+        let textoAdicional = '';
+        if (tipoActa === 'devolucion' && e.nombre_colaborador) {
+          textoAdicional = ` (${e.nombre_colaborador})`;
+        }
+        const serie = e.numero_serie ? ` · SN: ${e.numero_serie}` : '';
+        return `
+        <div class="item selectable-item ${selectedEquipoIds.includes(e.rowIndex) ? 'seleccionado' : ''}" onclick="toggleEquipo(${e.rowIndex})">
+          <span>${e.tipo_equipo || 'Equipo'} · ${e.marca || ''} ${e.modelo || ''}${serie}${textoAdicional}${e.memoria_ram ? ' (' + e.memoria_ram + ')' : ''}</span>
+        </div>
+      `;
+      }).join('');
+
+      // Mostrar proceso si es devolución y hay equipo seleccionado
+      if (tipoActa === 'devolucion' && selectedEquipoIds.length > 0) {
+        const equipoSeleccionado = lista.find(e => selectedEquipoIds.includes(e.rowIndex));
+        if (equipoSeleccionado && equipoSeleccionado.proceso) {
+          const procesoCont = document.getElementById('procesoCard');
+          if (procesoCont) {
+            procesoCont.style.display = 'block';
+            document.getElementById('proceso').value = equipoSeleccionado.proceso;
+            document.getElementById('proceso').disabled = true;
+          }
+        }
+      }
+    }
+
+    function mostrarAccesorios(lista) {
+      const cont = document.getElementById('accesorios');
+      if (!lista.length) {
+        cont.innerHTML = '<div class="item">No hay accesorios disponibles para este tipo de acta.</div>';
+        return;
+      }
+
+      cont.innerHTML = lista.map(a => {
+        let textoAdicional = '';
+        if (tipoActa === 'devolucion' && a.nombre_colaborador) {
+          textoAdicional = ` (${a.nombre_colaborador})`;
+        }
+        const idAccesorio = a.identificador || a.ID_accesorio || 'Accesorio';
+        return `
+        <div class="item selectable-item ${selectedAccesorioIds.includes(a.rowIndex) ? 'seleccionado' : ''}" onclick="toggleAccesorio(${a.rowIndex})">
+          <span>ID: ${idAccesorio} · ${a.nombre_accesorio || 'Accesorio'} · ${a.marca_accesorio || ''}${textoAdicional}</span>
+        </div>
+      `;
+      }).join('');
+    }
+
+    function toggleEquipo(id) {
+      if (tipoActa === 'cambio') {
+        selectedEquipoIds = selectedEquipoIds[0] === id ? [] : [id];
+        mostrarEquipos(equipos);
+        return;
+      }
+
+      const index = selectedEquipoIds.indexOf(id);
+      if (index === -1) {
+        selectedEquipoIds.push(id);
+      } else {
+        selectedEquipoIds.splice(index, 1);
+      }
+      mostrarEquipos(equipos);
+    }
+
+    function toggleAccesorio(id) {
+      const index = selectedAccesorioIds.indexOf(id);
+      if (index === -1) {
+        selectedAccesorioIds.push(id);
+      } else {
+        selectedAccesorioIds.splice(index, 1);
+      }
+      mostrarAccesorios(accesorios);
+    }
+
+    function toggleEquipoActualCambio(id) {
+      selectedEquipoActualId = selectedEquipoActualId === id ? null : id;
+      mostrarEquiposActualesCambio(equiposActualesCambio);
+    }
+
+    function toggleAccesorioActualCambio(id) {
+      const index = selectedAccesoriosActualesIds.indexOf(id);
+      if (index === -1) {
+        selectedAccesoriosActualesIds.push(id);
+      } else {
+        selectedAccesoriosActualesIds.splice(index, 1);
+      }
+      mostrarAccesoriosActualesCambio(accesoriosActualesCambio);
+    }
+
+    function filtrar() {
+      const texto = document.getElementById('buscador').value.toLowerCase();
+      const filtrados = colaboradores.filter(u => u.nombre.toLowerCase().includes(texto));
+      mostrarColaboradores(filtrados);
+    }
+
+    function generar() {
+      if (!tipoActa) {
+        alert('Seleccione el tipo de acta.');
+        return;
+      }
+      
+      if (tipoActa !== 'devolucion' && !seleccionado) {
+        alert('Seleccione un colaborador.');
+        return;
+      }
+
+      if (tipoActa === 'cambio') {
+        const equipoAnterior = equiposActualesCambio.find(e => e.rowIndex === selectedEquipoActualId);
+        const equipoNuevo = equipos.find(e => selectedEquipoIds.includes(e.rowIndex));
+        const accesoriosDevueltos = accesoriosActualesCambio
+          .filter(a => selectedAccesoriosActualesIds.includes(a.rowIndex))
+          .map(a => ({ ...a, estado_acta: 'Devuelto' }));
+        const accesoriosConservados = accesoriosActualesCambio
+          .filter(a => !selectedAccesoriosActualesIds.includes(a.rowIndex))
+          .map(a => ({ ...a, estado_acta: 'Conservado' }));
+        const accesoriosAsignados = accesorios
+          .filter(a => selectedAccesorioIds.includes(a.rowIndex))
+          .map(a => ({ ...a, estado_acta: 'Asignado' }));
+
+        if (!equipoAnterior) {
+          alert('Seleccione el equipo anterior del colaborador.');
+          return;
+        }
+
+        if (!equipoNuevo) {
+          alert('Seleccione el nuevo equipo disponible.');
+          return;
+        }
+
+        if (!document.getElementById('motivo').value.trim()) {
+          alert('Ingrese el motivo del cambio.');
+          return;
+        }
+
+        if (!document.getElementById('estadoEquipoAnterior').value) {
+          alert('Seleccione el estado del equipo anterior.');
+          return;
+        }
+
+        enviarGeneracion({
+          tipoActa,
+          usuario: seleccionado,
+          motivo: document.getElementById('motivo').value.trim(),
+          estadoEquipoAnterior: document.getElementById('estadoEquipoAnterior').value,
+          equipoAnterior,
+          equipoNuevo,
+          accesoriosDevueltos,
+          accesoriosConservados,
+          accesoriosAsignados
+        });
+        return;
+      }
+
+      const equiposSeleccionados = equipos.filter(e => selectedEquipoIds.includes(e.rowIndex));
+      const accesoriosSeleccionados = accesorios.filter(a => selectedAccesorioIds.includes(a.rowIndex));
+
+      if (!equiposSeleccionados.length && !accesoriosSeleccionados.length) {
+        alert('Seleccione al menos un equipo o accesorio.');
+        return;
+      }
+
+      // Para devolución, usar el colaborador del primer equipo/accesorio seleccionado
+      let usuarioParaActa = seleccionado;
+      if (tipoActa === 'devolucion' && equiposSeleccionados.length > 0) {
+        // Crear objeto colaborador basado en los datos del equipo
+        usuarioParaActa = {
+          nombre: equiposSeleccionados[0].nombre_colaborador || '',
+          id: equiposSeleccionados[0].colaborador || '',
+          cargo: ''
+        };
+      } else if (tipoActa === 'devolucion' && accesoriosSeleccionados.length > 0) {
+        usuarioParaActa = {
+          nombre: accesoriosSeleccionados[0].nombre_colaborador || '',
+          id: accesoriosSeleccionados[0].colaborador_asignado || '',
+          cargo: ''
+        };
+      }
+
+      if (usuarioParaActa && usuarioParaActa.id) {
+        const colaborador = colaboradores.find(c => c.id === usuarioParaActa.id.toString());
+        if (colaborador) {
+          usuarioParaActa.ciudad = colaborador.ubicacion || '';
+        }
+      }
+
+      const payload = {
+        tipoActa,
+        usuario: usuarioParaActa,
+        equipos: equiposSeleccionados,
+        accesorios: accesoriosSeleccionados
+      };
+
+      // Agregar proceso si es acta de préstamo
+      if (tipoActa === 'prestamo') {
+        payload.proceso = document.getElementById('proceso').value || '';
+      }
+
+      // Agregar observaciones y estado si es acta de recepción
+      if (tipoActa === 'recepcion') {
+        payload.observacionesEquipo = document.getElementById('observacionesEquipo').value || 'Ninguna';
+        payload.observacionesAccesorio = document.getElementById('observacionesAccesorio').value || 'Ninguna';
+        payload.estadoEquipo = document.getElementById('estadoEquipo').value || '';
+      }
+
+      enviarGeneracion(payload);
+    }
+
+    function enviarGeneracion(payload) {
+      const previewWindow=window.open('', '_blank');
+      if (previewWindow){
+        previewWindow.document.write('<title>Vista previa del acta</title><p style="font-family: Arial; padding: 16px;">Generando vista previa del acta...</p>');
+        previewWindow.document.close();
+      }
+      google.script.run.withSuccessHandler(resultado => {
+        if (resultado && resultado.previewUrl) {
+          if (previewWindow && !previewWindow.closed) {
+            previewWindow.location.replace(resultado.previewUrl);
+          } else {
+            window.open(resultado.previewUrl, '_blank');
+          }
+        } else if (previewWindow && !previewWindow.closed) {
+          previewWindow.close();
+        }
+        
+        const crearOtra = confirm('Acta generada correctamente. ¿Desea generar otra acta?');
+        if (crearOtra) {
+          reiniciarFormulario();
+        } else {
+          google.script.host.close();
+        }
+      }).withFailureHandler(err => {
+        console.error(err);
+        alert('Error al generar el acta. Revise la consola del script para más detalles.');
+      }).generarActa(payload);
+    }
+
+    function reiniciarFormulario() {
+      tipoActa = '';
+      document.getElementById('tipoActa').value = '';
+      limpiarSeleccion();
+      document.getElementById('buscador').value = '';
+      document.getElementById('colaboradorCard').style.display = 'block';
+      document.getElementById('infoTipoActa').innerText = 'Seleccione el tipo de acta para ver los elementos disponibles.';
+      document.getElementById('procesoCard').style.display = 'none';
+      document.getElementById('proceso').value = '';
+      document.getElementById('proceso').disabled = false;
+      document.getElementById('observacionesCard').style.display = 'none';
+      document.getElementById('observacionesEquipo').value = '';
+      document.getElementById('observacionesAccesorio').value = '';
+      document.getElementById('estadoEquipo').value = '';
+      document.getElementById('cambioCard').style.display = 'none';
+      document.getElementById('infoActualCard').style.display = 'none';
+      document.getElementById('motivo').value = '';
+      document.getElementById('estadoEquipoAnterior').value = '';
+      document.getElementById('equiposCard').style.display = 'block';
+      document.getElementById('accesoriosCard').style.display = 'block';
+      document.getElementById('equiposTitulo').innerText = 'Equipos';
+      document.getElementById('accesoriosTitulo').innerText = 'Accesorios';
+      resetCambioState();
+    }
+
+    window.onload = cargarDatos;
+  </script>
+
+</body>
+</html>
